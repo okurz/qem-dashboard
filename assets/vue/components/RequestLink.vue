@@ -27,7 +27,7 @@ const linkText = computed(() => {
 });
 
 const sourceIcon = computed(() => {
-  return this.incident.type === 'git' ? 'fas fa-code-branch' : 'fas fa-box-open';
+  return props.incident.type === 'git' ? 'fas fa-code-branch' : 'fas fa-box-open';
 });
 </script>
 
