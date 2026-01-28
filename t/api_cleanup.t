@@ -31,7 +31,7 @@ my $auth_headers = {Authorization => 'Token test_token', Accept => 'application/
 #      ->json_is('/details/incident_summary', {passed => 1});
 #
 #    $t->patch_ok(
-#      '/api/incidents' => $auth_headers => json => [
+#      '/api/v1/incidents' => $auth_headers => json => [
 #        {
 #          number      => 16861,
 #          project     => 'SUSE:Maintenance:16861',
@@ -57,7 +57,7 @@ my $auth_headers = {Authorization => 'Token test_token', Accept => 'application/
 #    $dashboard_test->expire_aggregate_jobs($t->app, [4953205]);
 #
 #    $t->patch_ok(
-#      '/api/incidents' => $auth_headers => json => [
+#      '/api/v1/incidents' => $auth_headers => json => [
 #        {
 #          number      => 16861,
 #          project     => 'SUSE:Maintenance:16861',
@@ -89,7 +89,7 @@ subtest 'Clean up jobs after rr_number change (during sync)' => sub {
 
   stderr_like {
     $t->patch_ok(
-      '/api/incidents' => $auth_headers => json => [
+      '/api/v1/incidents' => $auth_headers => json => [
         {
           number      => 16861,
           project     => 'SUSE:Maintenance:16861',
@@ -130,7 +130,7 @@ subtest 'Clean up jobs after rr_number change (during sync)' => sub {
       ->json_is('/details/incident_summary',  {passed => 1});
 
     $t->patch_ok(
-      '/api/incidents' => $auth_headers => json => [
+      '/api/v1/incidents' => $auth_headers => json => [
         {
           number      => 16861,
           project     => 'SUSE:Maintenance:16861',
