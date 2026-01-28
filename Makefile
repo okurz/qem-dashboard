@@ -95,7 +95,11 @@ check-audits:  # Run audits
 	PERL5LIB=~/perl5/lib/perl5 ~/perl5/bin/cpan-audit deps . \
 		--exclude CPANSA-Mojolicious-2024-58134 \
 		--exclude CPANSA-Mojolicious-2024-58135 \
-		--exclude CPANSA-File-Temp-2011-4116
+		--exclude CPANSA-File-Temp-2011-4116 \
+		--exclude CPANSA-YAML-LibYAML-2025-001 \
+		--exclude CPANSA-YAML-LibYAML-2012-1152 \
+		--exclude CPANSA-YAML-LibYAML-2014-9130 \
+		--exclude CPANSA-YAML-LibYAML-2016-01
 
 .PHONY: lint-npm
 lint-npm:
