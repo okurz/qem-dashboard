@@ -208,29 +208,7 @@ sub _register_routes ($self, $config) {
   $public->get('/:name' => [name => ['repos', 'blocked']])->to('overview#index');
   $public->get('/incident/<incident:num>')->to('overview#index');
 
-  # API (v1 and legacy)
-  my $register_api_routes = sub ($api) {
-    $api->get('/incidents/<incident:num>')->to('API::Incidents#show');
-    $api->get('/incidents')->to('API::Incidents#list');
-    $api->patch('/incidents/<incident:num>')->to('API::Incidents#update');
-    $api->patch('/incidents')->to('API::Incidents#sync');
-    $api->get('/incident_settings/<incident:num>')->to('API::Settings#get_incident_settings');
-    $api->put('/incident_settings')->to('API::Settings#add_incident_settings');
-    $api->get('/update_settings/<incident:num>')->to('API::Settings#get_update_settings');
-    $api->get('/update_settings')->to('API::Settings#search_update_settings');
-    $api->put('/update_settings')->to('API::Settings#add_update_settings');
-    $api->get('/jobs/<job_id:num>')->to('API::Jobs#show');
-    $api->patch('/jobs/<job_id:num>')->to('API::Jobs#modify');
-    $api->get('/jobs/<job_id:num>/remarks')->to('API::Jobs#show_remarks');
-    $api->patch('/jobs/<job_id:num>/remarks')->to('API::Jobs#update_remark');
-    $api->put('/jobs')->to('API::Jobs#add');
-    $api->get('/jobs/incident/<incident_settings:num>')->to('API::Jobs#incidents');
-    $api->get('/jobs/update/<update_settings:num>')->to('API::Jobs#updates');
-  };
-
-  # Legacy API routes (without validation)
-  $register_api_routes->($token->any('/api'));
-
+  # API
   $self->plugin(
     'OpenAPI' => {
       url    => $self->home->child('resources', 'openapi.yaml'),
