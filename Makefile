@@ -50,6 +50,12 @@ run-mock:
 	TEST_ONLINE=$(TEST_ONLINE) \
 	./script/run-mock
 
+.PHONY: run-dashboard-local
+run-dashboard-local: build
+	npm install --ignore-scripts  # "npm clean-install" seems to not always build all assets. This is meant for development setups
+	git restore package-lock.json
+	env DASHBOARD_CONF_OVERRIDE='{"pg":"${TEST_ONLINE}"}' script/dashboard daemon
+
 .PHONY: tidy
 tidy:
 	bash -c 'shopt -s extglob globstar nullglob; perltidy --pro=.../.perltidyrc -b -bext='/' **/*.p[lm] **/*.t && git diff --exit-code'
