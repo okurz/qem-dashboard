@@ -40,6 +40,16 @@ jobs:
           make install-deps-ubuntu install-deps-cpanm
       - name: Run all tests with coverage
         run: make only-test-coverage
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Checkout qem-bot
+        uses: actions/checkout@v5
+        with:
+          repository: openSUSE/qem-bot
+          path: qem-bot
+      - name: Run Integration Tests
+        run: make BOT_DIR=qem-bot test-integration
       - name: Check assets
         run: ls public/asset
       - name: Coveralls
