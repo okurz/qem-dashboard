@@ -186,3 +186,25 @@ only-test-coverage: only-test ## Run all tests and check coverage
 
 .PHONY: test-coverage
 test-coverage: only-test-coverage checkstyle ## Run all tests, check coverage and checkstyle
+
+BOT_DIR ?= ../qem-bot
+QEM_DASHBOARD_URL ?= http://localhost:3000
+
+.PHONY: test-integration-setup
+test-integration-setup: ## Setup qem-bot for integration testing
+	@if [ ! -d "$(BOT_DIR)" ]; then echo "Error: $(BOT_DIR) not found"; exit 1; fi
+	cd $(BOT_DIR) && pip install .
+
+.PHONY: test-integration-run
+test-integration-run: ## Run integration tests with qem-bot
+	@echo "Starting Dashboard..."
+	env DASHBOARD_CONF_OVERRIDE='{"pg":"${TEST_ONLINE}"}' ./script/dashboard daemon -l $(QEM_DASHBOARD_URL) > dashboard.log 2>&1 & echo $$! > dashboard.pid
+	@echo "Waiting for dashboard..."
+	@sleep 5
+	@echo "Running bot integration script..."
+	env BOT_DIR=$(BOT_DIR) QEM_DASHBOARD_URL=$(QEM_DASHBOARD_URL) ./t/integration/run_bot.sh || (kill `cat dashboard.pid`; rm dashboard.pid; exit 1)
+	kill `cat dashboard.pid`
+	rm dashboard.pid
+
+.PHONY: test-integration
+test-integration: test-integration-setup test-integration-run ## Run full integration test suite
