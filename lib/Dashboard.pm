@@ -13,6 +13,7 @@ use Dashboard::Model::Jobs;
 use Dashboard::Model::Settings;
 use Dashboard::Model::AMQP;
 use Dashboard::Controller::MCP;
+use Dashboard::Model::Notifications;
 
 use constant DEFAULT_PRIORITY => 550;    # https://progress.opensuse.org/issues/159549
 
@@ -174,6 +175,8 @@ EOF
   $self->helper(settings => sub ($c) { state $settings = Dashboard::Model::Settings->new(pg => $c->pg) });
   $self->helper(amqp     => sub ($c) { state $amqp     = Dashboard::Model::AMQP->new(log => $log, jobs => $c->jobs) });
   $self->helper(
+    notifications => sub ($c) { state $notifications = Dashboard::Model::Notifications->new(pg => $c->pg) });
+  $self->helper(
     mcp => sub ($c) {
       state $mcp = Dashboard::Controller::MCP->new(incidents => $c->incidents, jobs => $c->jobs);
     }
@@ -221,9 +224,12 @@ sub _register_routes ($self, $config) {
   my $json = $public->any('/app/api' => [format => ['json']])->to(format => undef);
   $json->get('/list')->to('overview#list');
   $json->get('/blocked')->to('overview#blocked');
+  $json->get('/blocked/new')->to('overview#blocked_new');
   $json->get('/repos')->to('overview#repos');
   $json->get('/incident/<incident:num>')->to('overview#incident');
   $json->get('/submission/<incident:num>')->to('overview#incident');
+  $json->get('/notification_settings')->to('API::Notifications#get');
+  $json->put('/notification_settings')->to('API::Notifications#update');
 
   # MCP
   $public->any('/mcp' => $self->mcp->server->to_action);
