@@ -31,12 +31,18 @@ export const useNotificationsStore = defineStore('notifications', {
     },
     async saveSettings(settings) {
       try {
-        await fetch('/app/api/notification_settings', {
+        const response = await fetch('/app/api/notification_settings', {
           method: 'PUT',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(settings)
         });
-        await this.loadSettings();
+        if (!response.ok) {
+          console.error('Failed to save settings, status:', response.status);
+          return;
+        }
+        const data = await response.json();
+        this.enabled = data.enabled ?? this.enabled;
+        this.checkIntervalSeconds = data.check_interval_seconds ?? this.checkIntervalSeconds;
       } catch (e) {
         console.error('Failed to save notification settings:', e);
       }
