@@ -529,5 +529,39 @@ subtest 'Plugin::JSON' => sub {
   }
 };
 
+subtest 'Notification Settings' => sub {
+  stderr_like {
+    $t->get_ok('/app/api/notification_settings' => {Accept => 'application/json'})
+      ->status_is(200)
+      ->json_has('/id')
+      ->json_has('/enabled')
+      ->json_has('/check_interval_seconds')
+      ->json_is('/enabled',                true)
+      ->json_is('/check_interval_seconds', 60);
+    $t->put_ok('/app/api/notification_settings' => {Accept => 'application/json'} => json => {enabled => false})
+      ->status_is(200);
+    $t->get_ok('/app/api/notification_settings' => {Accept => 'application/json'})
+      ->status_is(200)
+      ->json_is('/enabled', false);
+    $t->put_ok('/app/api/notification_settings' => {Accept => 'application/json'} => json =>
+        {enabled => true, check_interval_seconds => 30})->status_is(200);
+    $t->get_ok('/app/api/notification_settings' => {Accept => 'application/json'})
+      ->status_is(200)
+      ->json_is('/enabled',                true)
+      ->json_is('/check_interval_seconds', 30);
+  }
+  qr/access_log/, 'access log caught';
+};
+
+subtest 'Blocked New' => sub {
+  stderr_like {
+    $t->get_ok('/app/api/blocked/new' => {Accept => 'application/json'})
+      ->status_is(200)
+      ->json_has('/blocked')
+      ->json_has('/last_checked');
+  }
+  qr/access_log/, 'access log caught';
+};
+
 
 done_testing();
