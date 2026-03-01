@@ -8,6 +8,27 @@ sub blocked ($self) {
   $self->_render_api_response({blocked => $self->incidents->blocked});
 }
 
+sub blocked_new ($self) {
+  my $since = $self->param('since');
+  $self->notifications->record_check;
+  my $blocked      = $self->incidents->blocked;
+  my $settings     = $self->notifications->get_settings;
+  my $last_checked = $settings->{last_checked};
+  if ($since && $last_checked) {
+    my $since_ts        = $since / 1000;
+    my $last_checked_ts = Mojo::Date->new($last_checked)->to_ts;
+    if ($last_checked_ts > $since_ts) {
+      $self->_render_api_response({blocked => $blocked});
+    }
+    else {
+      $self->_render_api_response({blocked => [], last_checked => $settings->{last_checked}});
+    }
+  }
+  else {
+    $self->_render_api_response({blocked => $blocked, last_checked => $settings->{last_checked}});
+  }
+}
+
 sub list ($self) {
   $self->_render_api_response({incidents => $self->incidents->find});
 }

@@ -128,3 +128,15 @@ ALTER TABLE incidents ADD COLUMN rejection_reason TEXT;
 
 -- 10 down
 ALTER TABLE incidents DROP COLUMN rejection_reason;
+
+-- 11 up
+CREATE TABLE IF NOT EXISTS notification_settings (
+  id SERIAL PRIMARY KEY,
+  enabled BOOLEAN DEFAULT TRUE,
+  check_interval_seconds INT DEFAULT 60,
+  last_checked TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 11 down
+DROP TABLE IF EXISTS notification_settings;
