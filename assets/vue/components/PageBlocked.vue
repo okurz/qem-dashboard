@@ -1,22 +1,40 @@
 <script setup>
-import {ref, computed, watch} from 'vue';
+import {ref, computed, watch, onMounted} from 'vue';
 import {useRoute} from 'vue-router';
 import BlockedSubmission from './BlockedSubmission.vue';
 import * as filtering from '../helpers/filtering.js';
 import {useBlockedStore} from '@/stores/blocked';
 import {useConfigStore} from '@/stores/config';
+import {useNotificationsStore} from '@/stores/notifications';
 import {usePolling} from '../composables/polling';
 
 const route = useRoute();
 const blockedStore = useBlockedStore();
 const configStore = useConfigStore();
+const notificationsStore = useNotificationsStore();
 
 const groupFlavors = ref(route.query.group_flavors !== '0');
 const matchText = ref(route.query.submission || route.query.incident || '');
 const groupNames = ref(route.query.group_names || '');
 const selectedStates = ref(route.query.states ? route.query.states.split(',') : [...filtering.DEFAULT_STATES]);
 
-usePolling(() => blockedStore.fetchBlocked());
+onMounted(async () => {
+  await notificationsStore.checkPermission();
+  await notificationsStore.loadSettings();
+});
+
+const doPoll = async () => {
+  const wasEmpty = blockedStore.submissions.length === 0;
+  await blockedStore.fetchBlocked();
+  if (notificationsStore.enabled && notificationsStore.permission === 'granted') {
+    if (wasEmpty && blockedStore.submissions.length > 0) {
+      notificationsStore.initFromBlocked(blockedStore.submissions);
+    }
+    await notificationsStore.checkForNewFailures(blockedStore.submissions);
+  }
+};
+
+usePolling(doPoll);
 
 const groupFilters = computed(() => filtering.makeGroupNamesFilters(groupNames.value));
 
@@ -102,6 +120,36 @@ watch(
             {{ state }}
           </label>
         </div>
+      </div>
+      <div class="col-auto my-1">
+        <button
+          v-if="notificationsStore.permission === 'granted'"
+          class="btn btn-sm"
+          :class="notificationsStore.enabled ? 'btn-success' : 'btn-outline-secondary'"
+          :title="
+            notificationsStore.enabled
+              ? 'Notifications enabled - click to disable'
+              : 'Notifications disabled - click to enable'
+          "
+          @click="notificationsStore.enabled ? notificationsStore.disable() : notificationsStore.enable()"
+        >
+          <i class="fas" :class="notificationsStore.enabled ? 'fa-bell' : 'fa-bell-slash'"></i>
+        </button>
+        <button
+          v-else-if="notificationsStore.permission === 'default'"
+          class="btn btn-sm btn-outline-secondary"
+          title="Click to enable desktop notifications"
+          @click="notificationsStore.enable()"
+        >
+          <i class="fas fa-bell"></i>
+        </button>
+        <span
+          v-else-if="notificationsStore.permission === 'denied'"
+          class="text-muted small"
+          title="Notifications blocked - enable in browser settings"
+        >
+          <i class="fas fa-bell-slash"></i>
+        </span>
       </div>
     </div>
     <table class="table table-fixed">
