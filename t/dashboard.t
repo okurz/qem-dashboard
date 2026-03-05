@@ -238,6 +238,24 @@ subtest 'Blocked status' => sub {
   }
   $access_log->(), 'access log caught';
 
+  subtest 'blocked/new' => sub {
+
+    # No since parameter
+    $t->get_ok('/app/api/blocked/new')->status_is(200)->json_has('/blocked')->json_has('/last_checked');
+
+    my $now_ms = Time::HiRes::time() * 1000;
+
+    # since is in the future
+    $t->get_ok("/app/api/blocked/new?since=" . ($now_ms + 100000))
+      ->status_is(200)
+      ->json_is('/blocked', [], 'empty list when since is in the future');
+
+    # since is in the past
+    $t->get_ok("/app/api/blocked/new?since=" . ($now_ms - 100000))->status_is(200);
+    my $blocked = $t->tx->res->json->{blocked};
+    ok scalar(@$blocked) > 0, 'not empty when since is in the past';
+  };
+
   subtest 'coverage for Dashboard.pm helper/hooks' => sub {
     $t->app->log->level('warn');
     $t->get_ok('/api/incidents/abc' => {Authorization => 'Token test_token'})->status_is(400);
