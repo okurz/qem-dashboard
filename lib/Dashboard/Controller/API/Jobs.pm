@@ -7,7 +7,6 @@ use Mojo::Base 'Mojolicious::Controller', -signatures;
 sub add ($self) {
   $self = $self->openapi->valid_input or return;
   my $job = $self->req->json;
-
   my $is_id = $job->{incident_settings};
   my $us_id = $job->{update_settings};
   return $self->render(json => {error => "Job needs to reference incident settings or update settings"}, status => 400)
@@ -36,7 +35,6 @@ sub incidents ($self) {
 sub modify ($self) {
   $self = $self->openapi->valid_input or return;
   my $job_id = $self->param('job_id');
-
   my $job_data = $self->req->json;
   $self->jobs->modify($job_id, $job_data);
   $self->render(json => {message => 'Ok'});
