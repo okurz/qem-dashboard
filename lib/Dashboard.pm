@@ -30,7 +30,6 @@ sub startup ($self) {
   my $file = 'dashboard.yml';
   $file = $custom_file         if -r $custom_file;        # uncoverable branch true
   $file = $ENV{DASHBOARD_CONF} if $ENV{DASHBOARD_CONF};
-
   my $config = $self->plugin(NotYAMLConfig => {file => $file});
 
   if (my $override = $ENV{DASHBOARD_CONF_OVERRIDE}) {
@@ -60,6 +59,7 @@ sub _setup_logging ($self) {
     # All interesting log messages are "info" or higher
     $self->log->level($self->config->{log}{level} // 'info');
   }
+
 
   # Structured JSON logging
   $self->hook(
