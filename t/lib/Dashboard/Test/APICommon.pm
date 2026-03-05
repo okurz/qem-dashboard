@@ -344,21 +344,21 @@ sub run_api_tests ($t, $prefix) {
           ->status_is(200)
           ->json_is('/remarks/0/text', 'acceptable_for');
 
+        # Test with BOTH query param and JSON body to cover //= branches in Jobs.pm
+        $t->patch_ok("$prefix/jobs/4953193/remarks?incident_number=16860&text=param_text" => $auth_headers => json =>
+            {incident_number => "16861", text => 'body_text'})->status_is(200);
+        my $remarks
+          = $t->get_ok("$prefix/jobs/4953193/remarks" => $auth_headers)->status_is(200)->tx->res->json->{remarks};
+        ok grep({ $_->{text} eq 'param_text' } @$remarks), 'query param text takes precedence';
+
         # Test update_remark with JSON body
         $t->patch_ok(
-          "$prefix/jobs/4953193/remarks" => $auth_headers => json => {incident_number => '16860', text => 'json_remark'})
-          ->status_is(200);
-
-        # Also test with JSON body to cover that branch in Jobs.pm
-        # Use a DIFFERENT incident to avoid replacing the previous remark
-        $t->patch_ok(
-          "$prefix/jobs/4953193/remarks" => $auth_headers => json => {incident_number => "16861", text => 'body_text'})
+          "$prefix/jobs/4953193/remarks" => $auth_headers => json => {incident_number => "16861", text => 'body_text_2'})
           ->status_is(200)
           ->json_is('/message', 'Ok', 'patch job remarks with JSON body returns Ok');
 
-        my $remarks
-          = $t->get_ok("$prefix/jobs/4953193/remarks" => $auth_headers)->status_is(200)->tx->res->json->{remarks};
-        ok grep({ $_->{text} eq 'body_text' } @$remarks), 'found body_text remark';
+        $remarks = $t->get_ok("$prefix/jobs/4953193/remarks" => $auth_headers)->status_is(200)->tx->res->json->{remarks};
+        ok grep({ $_->{text} eq 'body_text_2' } @$remarks), 'found body_text_2 remark';
 
         # Branch coverage: job remark without incident number
         $t->patch_ok("$prefix/jobs/4953193/remarks" => $auth_headers => form => {text => 'global_remark'})->status_is(200);
@@ -392,10 +392,6 @@ sub run_api_tests ($t, $prefix) {
         $t->patch_ok("$prefix/jobs/4953193/remarks" => $auth_headers)
           ->status_is(400)
           ->json_is('/error', 'Missing remark text');
-
-        # Coverage for Jobs.pm line 69-70: incident_number/text from query string override JSON
-        $t->patch_ok("$prefix/jobs/4953193/remarks?incident_number=16860&text=query_remark" => $auth_headers => json =>
-            {incident_number => '99999', text => 'json_remark'})->status_is(200);
 
         # Invalid job_id type
         $t->patch_ok("$prefix/jobs/abc/remarks" => $auth_headers)->status_is(400)->json_is('/error', 'Validation failed');

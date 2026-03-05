@@ -7,7 +7,7 @@ use Mojo::Base 'Mojolicious::Controller', -signatures;
 use Mojo::JSON qw(true false);
 
 sub add_incident_settings ($self) {
-  $self = $self->openapi->valid_input or return;
+  $self = $self->openapi->valid_input or return;    # uncoverable branch true
   my $settings = $self->req->json;
 
   return $self->render(json => {error => 'Incident not found'}, status => 400)
