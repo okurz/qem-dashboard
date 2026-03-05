@@ -201,7 +201,7 @@ subtest 'Overview API with no jobs' => sub {
   my $t = Test::Mojo->new($app_empty);
 
   stderr_like {
-    $t->get_ok('/app/api/list')->status_is(200)->json_is('/last_updated', undef, 'last_updated is undef when no jobs');
+    $t->get_ok('/app/api/list')->status_is(200)->json_is('/last_updated', undef);
   }
   $access_log->(), 'access log caught';
 };
@@ -241,26 +241,33 @@ subtest 'Blocked status' => sub {
   subtest 'blocked/new' => sub {
 
     # No since parameter
-    $t->get_ok('/app/api/blocked/new')->status_is(200)->json_has('/blocked')->json_has('/last_checked');
+    stderr_like {
+      $t->get_ok('/app/api/blocked/new')->status_is(200)->json_has('/blocked')->json_has('/last_checked');
+    }
+    qr/access_log/, 'access log caught';
 
     my $now_ms = Time::HiRes::time() * 1000;
 
     # since is in the future
-    $t->get_ok("/app/api/blocked/new?since=" . ($now_ms + 100000))
-      ->status_is(200)
-      ->json_is('/blocked', [], 'empty list when since is in the future');
+    stderr_like {
+      $t->get_ok("/app/api/blocked/new?since=" . ($now_ms + 100000))
+        ->status_is(200)
+        ->json_is('/blocked', [], 'empty list when since is in the future');
+    }
+    qr/access_log/, 'access log caught';
 
     # since is in the past
-    $t->get_ok("/app/api/blocked/new?since=" . ($now_ms - 100000))->status_is(200);
+    stderr_like { $t->get_ok("/app/api/blocked/new?since=" . ($now_ms - 100000))->status_is(200) }
+    qr/access_log/, 'access log caught';
     my $blocked = $t->tx->res->json->{blocked};
     ok scalar(@$blocked) > 0, 'not empty when since is in the past';
   };
 
   subtest 'coverage for Dashboard.pm helper/hooks' => sub {
-    $t->app->log->level('warn');
-    $t->get_ok('/api/incidents/abc' => {Authorization => 'Token test_token'})->status_is(400);
+    stderr_like { $t->get_ok('/api/incidents/abc' => {Authorization => 'Token test_token'})->status_is(400) }
+    qr/access_log/, 'access log caught';
     $t->app->routes->get('/test_400_no_json' => sub ($c) { $c->render(text => 'error', status => 400) });
-    $t->get_ok('/test_400_no_json')->status_is(400);
+    stderr_like { $t->get_ok('/test_400_no_json')->status_is(400) } qr/access_log/, 'access log caught';
     is $t->app->openapi->build_response_body([]), '[]', 'handles non-hash data';
     is $t->app->openapi->build_response_body({}), '{}', 'handles hash without errors';
 
