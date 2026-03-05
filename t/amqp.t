@@ -129,16 +129,16 @@ subtest 'Handle delete job' => sub {
   _is_count(0);
 };
 
-subtest 'Handle missing data' => sub {
-  is $t->app->amqp->handle('suse.openqa.job.done',    {id => 123}), undef, 'returns early with missing arguments';
-  is $t->app->amqp->handle('suse.openqa.job.cancel',  {}),          undef, 'returns early with missing id for cancel';
-  is $t->app->amqp->handle('suse.openqa.job.delete',  {}),          undef, 'returns early with missing id for delete';
-  is $t->app->amqp->handle('suse.openqa.job.restart', {}), undef, 'returns early with missing result for restart';
-};
-
 subtest 'Unknown type' => sub {
   $t->app->amqp->handle('suse.openqa.job.unknown', {id => 123});
   ok 1, 'handles unknown job type gracefully';
+};
+
+subtest 'Handle missing data' => sub {
+  is $t->app->amqp->handle('suse.openqa.job.done',    {id => 123}), undef, 'returns early with missing result for done';
+  is $t->app->amqp->handle('suse.openqa.job.cancel',  {}),          undef, 'returns early with missing id for cancel';
+  is $t->app->amqp->handle('suse.openqa.job.delete',  {}),          undef, 'returns early with missing id for delete';
+  is $t->app->amqp->handle('suse.openqa.job.restart', {}),          undef, 'returns early with missing result for restart';
 };
 
 done_testing();
