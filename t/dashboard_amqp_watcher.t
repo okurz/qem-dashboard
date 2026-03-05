@@ -86,7 +86,6 @@ subtest 'amqp_watcher command' => sub {
       @backoff_counter = ();
       my ($rabbit, $rabbit_channel, $rabbit_queue_result, $rabbit_consumer)
         = Test::Stub::RabbitMQ->setup_successful_connection();
-      my $ioloop = Test::Stub::IOLoop->stub_timer(\@backoff_counter);
       my $new_rabbitmq_client;
       $rabbit->redefine(
         new => sub {
@@ -94,16 +93,28 @@ subtest 'amqp_watcher command' => sub {
           return $new_rabbitmq_client;
         }
       );
+
+      # We need to capture the callbacks from timer to execute them
+      my @timer_callbacks;
+      my $mock_ioloop = Test::MockModule->new('Mojo::IOLoop');
+      $mock_ioloop->redefine(
+        timer => sub {
+          my ($loop, $delay, $cb) = @_;
+          push @backoff_counter, $delay;
+          push @timer_callbacks, $cb;
+        }
+      );
+
       $amqp_watcher->_connect(30);
       stderr_like { Mojo::IOLoop->one_tick }
       $amqp_log->(qr/amqp_connected/, 'info'), 'logs successful connection';
 
       # Branch coverage: connect event
-      my $mock_stream = bless {}, 'MockStream';
-      my $timeout_val;
+      my $mock_stream = bless {timeout_val => 0}, 'MockStream';
       {
         no strict 'refs';
-        *{"MockStream::timeout"} = sub { (my $self, $timeout_val) = @_; };
+        *{"MockStream::timeout"}
+          = sub { (my $self, my $val) = @_; $self->{timeout_val} = $val if defined $val; $self->{timeout_val} };
       }
 
       # Redefine timer to execute callback immediately for this test
@@ -117,14 +128,12 @@ subtest 'amqp_watcher command' => sub {
       );
 
       $new_rabbitmq_client->emit('connect', $mock_stream);
-      is $timeout_val, 120, 'stream timeout set to 120 on connect';
 
-      $ioloop_mock->unmock('timer');
-
-      # Re-stub timer for the rest of the test
-      Test::Stub::IOLoop->stub_timer(\@backoff_counter);
-
-      Mojo::IOLoop->one_tick;
+      # Trigger the timer callback from line 91 in amqp_watcher.pm
+      my $timeout_timer_cb = shift @timer_callbacks;
+      ok $timeout_timer_cb, 'timer callback for timeout set';
+      $timeout_timer_cb->();
+      is $mock_stream->{timeout_val}, 120, 'stream timeout set to 120';
 
       stderr_like { $new_rabbitmq_client->emit('close') }
       $amqp_log->(qr/amqp_reconnect/, 'info'), 'logs reconnect on close';
