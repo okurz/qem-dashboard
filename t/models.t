@@ -47,9 +47,18 @@ subtest 'Dashboard::Model::Incidents' => sub {
 
   subtest 'name' => sub {
     my $inc = $incidents->incident_for_number(16860);
-    is $incidents->name($inc),              '16860:perl-Mojolicious', 'correct name for 16860';
-    is $incidents->name({number => 99999}), '99999:unknown',          'correct name for unknown incident';
+    is $incidents->name($inc), '16860:perl-Mojolicious', 'correct name for 16860';
+    is $incidents->name({number => 99999}), '99999:unknown', 'correct name for unknown incident';
+    is $incidents->name({number => 99998, packages => []}), '99998:unknown',
+      'correct name for incident with empty packages';
   };
+
+  subtest 'build_nr' => sub {
+    my $inc = $incidents->incident_for_number(16860);
+    ok $incidents->build_nr($inc), 'returns build number for incident with jobs';
+    is $incidents->build_nr({id => 99999}), undef, 'returns undef for non-existent incident id';
+  };
+
 
   subtest 'job filtering' => sub {
     my $dashboard_test_filter = Dashboard::Test->new(online => $ENV{TEST_ONLINE}, schema => 'models_filter_test');
@@ -116,6 +125,23 @@ subtest 'Dashboard::Model::Incidents' => sub {
       }
     );
 
+    # Job for another incident (matches :[0-9]+: but not :1001:)
+    $jobs->add(
+      {
+        update_settings => $update_settings_id,
+        name            => 'job_for_1002',
+        job_group       => 'Group A',
+        status          => 'failed',
+        job_id          => 100104,
+        group_id        => 100,
+        distri          => 'd',
+        flavor          => 'f',
+        version         => 'v',
+        arch            => 'x86_64',
+        build           => ':1002:some-build'
+      }
+    );
+
     # Obsolete job for 1001
     $jobs->add(
       {
@@ -139,8 +165,8 @@ subtest 'Dashboard::Model::Incidents' => sub {
     is $res1001->{"100 f v"}{passed}, 1, 'Incident 1001 sees generic job';
 
     my $res1002 = $incs->_update_openqa_jobs({id => $inc1002_id, number => 1002});
-    is $res1002->{"100 f v"}{failed}, undef, 'Incident 1002 does NOT see failed job of 1001';
-    is $res1002->{"100 f v"}{passed}, 1,     'Incident 1002 sees generic job';
+    is $res1002->{"100 f v"}{failed}, 1, 'Incident 1002 sees its own failed job';
+    is $res1002->{"100 f v"}{passed}, 1, 'Incident 1002 sees generic job';
 
     # rr_number change
     $incs->update({%$mock_incident, number => 1001, rr_number => 100});
@@ -255,10 +281,51 @@ subtest 'Dashboard::Model::Incidents' => sub {
     my $incs     = $t->app->incidents;
     my $settings = $t->app->settings;
 
-    # Add a repo (update settings) with NO jobs
+    # Add a repo (update settings) with NO jobs to trigger line 121 branch
     $settings->add_update_settings([1],
       {product => 'NoJobsProduct', arch => 'x86_64', build => '123', repohash => 'h', settings => {}});
     ok $incs->repos, 'repos works even with a repo having no jobs';
+
+    # Add another one to test line 127: different update settings with same builds
+    $settings->add_update_settings([1],
+      {product => 'SLES-12-SP5', arch => 'x86_64', build => '20201107-1', repohash => 'h2', settings => {}});
+    ok $incs->repos, 'repos works with duplicate builds in different updates';
+  };
+
+  subtest 'sync with changed rr_number' => sub {
+    my $dashboard_test_sync = Dashboard::Test->new(online => $ENV{TEST_ONLINE}, schema => 'models_sync_test');
+    my $app_sync            = Test::Mojo->new(Dashboard => $dashboard_test_sync->default_config)->app;
+    $dashboard_test_sync->no_fixtures($app_sync);
+    my $incs = $app_sync->incidents;
+
+    # Initial sync with NO rr_number (will be NULL in DB, then 0 in code)
+    $incs->sync([{number => 16860, project => 'P1', packages => ['pkg1'], isActive => 1, rr_number => undef}]);
+    is $incs->incident_for_number(16860)->{rr_number}, undef, 'initial rr_number is undef (NULL in DB)';
+
+    # Sync with rr_number (should NOT trigger cleanup because old was 0)
+    $incs->sync([{number => 16860, project => 'P1', packages => ['pkg1'], isActive => 1, rr_number => '100'}]);
+    is $incs->incident_for_number(16860)->{rr_number}, '100', 'rr_number set to 100';
+
+    # Change rr_number (SHOULD trigger cleanup)
+    $incs->sync([{number => 16860, project => 'P1', packages => ['pkg1'], isActive => 1, rr_number => '200'}]);
+    is $incs->incident_for_number(16860)->{rr_number}, '200', 'rr_number updated to 200';
+
+    # Sync with same rr_number (should NOT trigger cleanup)
+    $incs->sync([{number => 16860, project => 'P1', packages => ['pkg1'], isActive => 1, rr_number => '200'}]);
+    ok 1, 'sync with same rr_number works';
+
+    # Sync with NO rr_number (defined but null/undef)
+    $incs->sync([{number => 16860, project => 'P1', packages => ['pkg1'], isActive => 1, rr_number => undef}]);
+    ok 1, 'sync with undef rr_number works';
+
+    # Sync with 0 as rr_number
+    $incs->sync([{number => 16860, project => 'P1', packages => ['pkg1'], isActive => 1, rr_number => '0'}]);
+    ok 1, 'sync with "0" rr_number works';
+
+    # Sync with undef fields (coverage for scminfo/url // '')
+    $incs->sync(
+      [{number => 16860, project => 'P1', packages => ['pkg1'], isActive => 1, rr_number => '200', type => undef}]);
+    ok 1, 'sync with undef fields works';
   };
 
   subtest 'build_nr non-existent' => sub {
