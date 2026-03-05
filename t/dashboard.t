@@ -19,6 +19,8 @@ if (!$ENV{TEST_ONLINE}) {    # uncoverable branch true
   plan skip_all => 'set TEST_ONLINE to enable this test';    # uncoverable statement
 }
 
+$ENV{MOJO_MODE} = 'production';
+
 my $dashboard_test = Dashboard::Test->new(online => $ENV{TEST_ONLINE}, schema => 'dashboard_test');
 my $config         = $dashboard_test->default_config;
 my $t              = Test::Mojo->new(Dashboard => $config);
@@ -109,6 +111,35 @@ subtest 'App config endpoint' => sub {
       ->json_is('/defaultPriority',    Dashboard::DEFAULT_PRIORITY);
   }
   $access_log->(), 'access log caught';
+
+  # Branch coverage: minimal config
+  my $t_min = Test::Mojo->new(
+    Dashboard => {secrets => ['s'], pg => $config->{pg}, openqa => {url => 'https://openqa.example.com'}});
+  stderr_like {
+    $t_min->get_ok('/app-config')->status_is(200)->json_is('/openqaNotGroupGlob', '*Devel*,*Test*');
+  }
+  qr/access_log/, 'access log for minimal config caught';
+};
+
+subtest 'before_render coverage' => sub {
+  my $t = Test::Mojo->new(Dashboard => $config);
+  $t->app->log->level('debug');
+  $t->app->routes->get('/test_400_json' => sub ($c) { $c->render(json => {e => 1}, status => 400) });
+  stderr_like { $t->get_ok('/test_400_json')->status_is(400) } qr/400 response for/, 'logs 400 with JSON';
+};
+
+subtest 'openapi.build_response_body extra coverage' => sub {
+  my $t = Test::Mojo->new(Dashboard => $config);
+  is $t->app->openapi->build_response_body({errors => [], status => 404}), '{"error":"Resource not found"}',
+    'handles 404 status';
+
+  {
+
+    package MockError;
+    use overload '""' => sub {'Error'};
+  }
+  is $t->app->openapi->build_response_body({errors => [bless({}, 'MockError')], status => 400}),
+    '{"error":"Validation failed","errors":[{"message":"Error","path":""}]}', 'handles other statuses with errors';
 };
 
 subtest 'Migrate command' => sub {
