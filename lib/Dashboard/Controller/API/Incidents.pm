@@ -11,6 +11,7 @@ sub sync ($self) {
   my $incidents = $self->req->json;
   $self->incidents->sync($incidents, $self->every_param('type'));
 
+
   # Disabled to test without cleanup in production
   #$self->jobs->cleanup_aggregates;
 
@@ -33,6 +34,7 @@ sub update ($self) {
   $self = $self->openapi->valid_input or return;
   my $incident = $self->req->json;
   $self->incidents->update($incident);
+
   $self->render(json => {message => 'Ok'});
 }
 

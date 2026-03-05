@@ -9,6 +9,7 @@ use Mojo::JSON qw(true false);
 sub add_incident_settings ($self) {
   $self = $self->openapi->valid_input or return;
   my $settings = $self->req->json;
+
   return $self->render(json => {error => 'Incident not found'}, status => 400)
     unless my $incident_id = $self->incidents->id_for_number($settings->{incident});
 
@@ -19,6 +20,7 @@ sub add_incident_settings ($self) {
 sub add_update_settings ($self) {
   $self = $self->openapi->valid_input or return;
   my $settings = $self->req->json;
+
   my @incident_ids;
   my $incidents = $self->incidents;
   for my $incident (@{$settings->{incidents}}) {
