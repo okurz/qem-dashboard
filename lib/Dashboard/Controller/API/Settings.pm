@@ -41,13 +41,7 @@ sub get_incident_settings ($self) {
 }
 
 sub get_update_settings ($self) {
-<<<<<<< HEAD
-  $self = $self->openapi->valid_input or return;
-||||||| parent of 6365b4c1 (refactor: use recommended OpenAPI validation pattern in controllers)
-  return if $self->stash('openapi.path') && !$self->openapi->valid_input;
-=======
   $self = $self->openapi->valid_input or return;    # uncoverable branch true
->>>>>>> 6365b4c1 (refactor: use recommended OpenAPI validation pattern in controllers)
   return $self->render(json => {error => 'Incident not found'}, status => 400)
     unless my $incident_id = $self->incidents->id_for_number($self->param('incident'));
   $self->render(json => $self->settings->get_update_settings($incident_id));
