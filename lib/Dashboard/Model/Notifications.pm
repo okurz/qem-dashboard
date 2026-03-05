@@ -7,7 +7,10 @@ use Mojo::Base -base, -signatures;
 has 'pg';
 
 sub get_settings ($self) {
-  my $settings = $self->pg->db->query('SELECT * FROM notification_settings LIMIT 1')->hash;
+  my $settings
+    = $self->pg->db->query(
+    'SELECT enabled, check_interval_seconds, TO_CHAR(last_checked, \'YYYY-MM-DD"T"HH24:MI:SS"Z"\') as last_checked FROM notification_settings LIMIT 1'
+    )->hash;
   return $settings if $settings;
   $self->pg->db->query('INSERT INTO notification_settings (enabled) VALUES (TRUE)');
   return $self->pg->db->query('SELECT * FROM notification_settings LIMIT 1')->hash;
