@@ -46,13 +46,7 @@ sub _incident ($incidents, $remark) {
 }
 
 sub show_remarks ($self) {
-<<<<<<< HEAD
-  $self = $self->openapi->valid_input or return;
-||||||| parent of 1be78b5c (refactor: use recommended OpenAPI validation pattern in controllers)
-  return if $self->stash('openapi.path') && !$self->openapi->valid_input;
-=======
   $self = $self->openapi->valid_input or return;    # uncoverable branch true
->>>>>>> 1be78b5c (refactor: use recommended OpenAPI validation pattern in controllers)
   my $openqa_job_id   = $self->param('job_id');
   my $internal_job_id = $self->jobs->internal_job_id($openqa_job_id);
   return $self->render(json => {error => "openQA job ($openqa_job_id) does not exist"}, status => 404)
@@ -96,13 +90,7 @@ sub show ($self) {
 }
 
 sub updates ($self) {
-<<<<<<< HEAD
-  $self = $self->openapi->valid_input or return;
-||||||| parent of 1be78b5c (refactor: use recommended OpenAPI validation pattern in controllers)
-  return if $self->stash('openapi.path') && !$self->openapi->valid_input;
-=======
   $self = $self->openapi->valid_input or return;    # uncoverable branch true
->>>>>>> 1be78b5c (refactor: use recommended OpenAPI validation pattern in controllers)
   my $job = $self->jobs->get_update_settings($self->param('update_settings'));
   $self->render(json => $job);
 }
