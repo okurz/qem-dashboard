@@ -260,42 +260,9 @@ subtest 'Dashboard::Model::Incidents' => sub {
       {product => 'NoJobsProduct', arch => 'x86_64', build => '123', repohash => 'h', settings => {}});
     ok $incs->repos, 'repos works even with a repo having no jobs';
   };
-};
-
-subtest 'Dashboard::Model::Jobs' => sub {
-  my $jobs = $t->app->jobs;
-
-  subtest '_normalize_result' => sub {
-
-    # Internal method, but we can test it via a helper or by making it public/testing through update_result
-    is Dashboard::Model::Jobs::_normalize_result('passed'),           'passed',  'passed stays passed';
-    is Dashboard::Model::Jobs::_normalize_result('softfailed'),       'passed',  'softfailed becomes passed';
-    is Dashboard::Model::Jobs::_normalize_result('none'),             'waiting', 'none becomes waiting';
-    is Dashboard::Model::Jobs::_normalize_result('failed'),           'failed',  'failed stays failed';
-    is Dashboard::Model::Jobs::_normalize_result('timeout_exceeded'), 'stopped', 'timeout_exceeded becomes stopped';
-    is Dashboard::Model::Jobs::_normalize_result('user_cancelled'),   'stopped', 'user_cancelled becomes stopped';
-    is Dashboard::Model::Jobs::_normalize_result('something_else'),   'failed',  'something_else becomes failed';
-  };
-
-  subtest 'latest_update with no jobs' => sub {
-    my $dashboard_test_empty = Dashboard::Test->new(online => $ENV{TEST_ONLINE}, schema => 'models_empty_test');
-    my $app_empty            = Test::Mojo->new(Dashboard => $dashboard_test_empty->default_config)->app;
-    $dashboard_test_empty->no_fixtures($app_empty);
-    is $app_empty->jobs->latest_update, undef, 'latest_update is undef when no jobs exist';
-  };
-
-  subtest 'update_result with non-existent job' => sub {
-    ok !$jobs->update_result(9999999, 'passed'), 'update_result returns false for non-existent job';
-  };
-
-  subtest 'keep_schema' => sub {
-    my $dashboard_test_keep
-      = Dashboard::Test->new(online => $ENV{TEST_ONLINE}, schema => 'models_keep_test', keep_schema => 1);
-    ok $dashboard_test_keep, 'Dashboard::Test->new with keep_schema works';
-  };
 
   subtest 'build_nr non-existent' => sub {
-    is $t->app->incidents->build_nr({id => 99999}), undef, 'returns undef for non-existent incident id in build_nr';
+    is $incidents->build_nr({id => 99999}), undef, 'returns undef for non-existent incident id in build_nr';
   };
 };
 
@@ -332,8 +299,6 @@ subtest 'Dashboard::Model::Jobs' => sub {
   my $jobs = $t->app->jobs;
 
   subtest '_normalize_result' => sub {
-
-    # Internal method, but we can test it via a helper or by making it public/testing through update_result
     is Dashboard::Model::Jobs::_normalize_result('passed'),           'passed',  'passed stays passed';
     is Dashboard::Model::Jobs::_normalize_result('softfailed'),       'passed',  'softfailed becomes passed';
     is Dashboard::Model::Jobs::_normalize_result('none'),             'waiting', 'none becomes waiting';
@@ -379,10 +344,31 @@ subtest 'Dashboard::Model::Jobs' => sub {
   };
 
   subtest 'get_update_settings' => sub {
-
-    # Test the model method
     my $res = $jobs->get_update_settings(1);
     ok ref $res eq 'ARRAY', 'returns array ref';
+  };
+
+  subtest 'keep_schema' => sub {
+    my $dashboard_test_keep
+      = Dashboard::Test->new(online => $ENV{TEST_ONLINE}, schema => 'models_keep_test', keep_schema => 1);
+    ok $dashboard_test_keep, 'Dashboard::Test->new with keep_schema works';
+  };
+};
+
+subtest 'Dashboard::Model::Notifications' => sub {
+  my $notifications = $t->app->notifications;
+  subtest 'initial settings' => sub {
+    $t->app->pg->db->query('DELETE FROM notification_settings');
+    my $s = $notifications->get_settings;
+    is $s->{enabled}, 1, 'enabled by default';
+  };
+  subtest 'update_settings creation' => sub {
+    $t->app->pg->db->query('DELETE FROM notification_settings');
+    my $s = $notifications->update_settings({enabled => 0});
+    is $s->{enabled}, 0, 'created with enabled=0';
+  };
+  subtest 'update_settings returns undef if no known fields' => sub {
+    ok !$notifications->update_settings({foo => 'bar'}), 'returns undef for unknown fields';
   };
 };
 
