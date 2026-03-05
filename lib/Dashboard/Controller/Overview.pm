@@ -16,7 +16,7 @@ sub blocked_new ($self) {
   my $last_checked = $settings->{last_checked};
   if ($since && $last_checked) {
     my $since_ts        = $since / 1000;
-    my $last_checked_ts = Mojo::Date->new($last_checked)->to_ts;
+    my $last_checked_ts = Mojo::Date->new($last_checked)->epoch // 0;
     if ($last_checked_ts > $since_ts) {
       $self->_render_api_response({blocked => $blocked});
     }
