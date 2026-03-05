@@ -47,7 +47,7 @@ paths:
       operationId: listIncidents
       description: List all incidents
       responses:
-        "200":
+        '200':
           description: List of incidents
           content:
             application/json:
@@ -68,8 +68,8 @@ paths:
               items:
                 $ref: '#/components/schemas/incident'
       responses:
-        "200": *success_message_response
-        "400": *error_response
+        '200': *success_message_response
+        '400': *error_response
   /incidents/{incident}:
     get:
       x-mojo-to: API::Incidents#show
@@ -78,13 +78,13 @@ paths:
       parameters:
         - *incident_path_param
       responses:
-        "200":
+        '200':
           description: Incident details
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/incident'
-        "404": *error_response
+        '404': *error_response
     patch:
       x-mojo-to: API::Incidents#update
       operationId: updateIncident
@@ -133,7 +133,7 @@ paths:
             schema:
               $ref: '#/components/schemas/incident_settings'
       responses:
-        "200":
+        '200':
           description: Settings added
           content:
             application/json:
@@ -144,7 +144,7 @@ paths:
                     type: string
                   id:
                     type: integer
-        "400": *error_response
+        '400': *error_response
   /incident_settings/{incident}:
     get:
       x-mojo-to: API::Settings#get_incident_settings
@@ -153,7 +153,7 @@ paths:
       parameters:
         - *incident_path_param
       responses:
-        "200":
+        '200':
           description: Incident settings
           content:
             application/json:
@@ -161,7 +161,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/incident_settings'
-        "400": *error_response
+        '400': *error_response
   /update_settings:
     get:
       x-mojo-to: API::Settings#search_update_settings
@@ -184,7 +184,7 @@ paths:
             type: string
             pattern: ^[0-9]+$
       responses:
-        "200":
+        '200':
           description: List of update settings
           content:
             application/json:
@@ -203,7 +203,7 @@ paths:
             schema:
               $ref: '#/components/schemas/update_settings'
       responses:
-        "200":
+        '200':
           description: Settings added
           content:
             application/json:
@@ -214,7 +214,7 @@ paths:
                     type: string
                   id:
                     type: integer
-        "400": *error_response
+        '400': *error_response
   /update_settings/{incident}:
     get:
       x-mojo-to: API::Settings#get_update_settings
@@ -223,7 +223,7 @@ paths:
       parameters:
         - *incident_path_param
       responses:
-        "200":
+        '200':
           description: Update settings
           content:
             application/json:
@@ -231,7 +231,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/update_settings'
-        "400": *error_response
+        '400': *error_response
   /jobs:
     put:
       x-mojo-to: API::Jobs#add
@@ -244,8 +244,8 @@ paths:
             schema:
               $ref: '#/components/schemas/job'
       responses:
-        "200": *success_message_response
-        "400": *error_response
+        '200': *success_message_response
+        '400': *error_response
   /jobs/{job_id}:
     get:
       x-mojo-to: API::Jobs#show
@@ -254,13 +254,13 @@ paths:
       parameters:
         - *job_id_path_param
       responses:
-        "200":
+        '200':
           description: Job details
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/job'
-        "400": *error_response
+        '400': *error_response
     patch:
       x-mojo-to: API::Jobs#modify
       operationId: modifyJob
@@ -277,8 +277,8 @@ paths:
                 obsolete:
                   type: boolean
       responses:
-        "200": *success_message_response
-        "400": *error_response
+        '200': *success_message_response
+        '400': *error_response
   /jobs/{job_id}/remarks:
     get:
       x-mojo-to: API::Jobs#show_remarks
@@ -287,7 +287,7 @@ paths:
       parameters:
         - *job_id_path_param
       responses:
-        "200":
+        '200':
           description: Job remarks
           content:
             application/json:
@@ -303,7 +303,7 @@ paths:
                           type: string
                         incident:
                           type: integer
-        "404": *error_response
+        '404': *error_response
     patch:
       x-mojo-to: API::Jobs#update_remark
       operationId: updateJobRemark
@@ -319,8 +319,8 @@ paths:
             schema:
               $ref: '#/components/schemas/job_remark_update'
       responses:
-        "200": *success_message_response
-        "404": *error_response
+        '200': *success_message_response
+        '404': *error_response
   /jobs/incident/{incident_settings}:
     get:
       x-mojo-to: API::Jobs#incidents
@@ -334,7 +334,7 @@ paths:
             type: string
             pattern: ^[0-9]+$
       responses:
-        "200":
+        '200':
           description: Jobs
           content:
             application/json:
@@ -355,7 +355,7 @@ paths:
             type: string
             pattern: ^[0-9]+$
       responses:
-        "200":
+        '200':
           description: Jobs
           content:
             application/json:

@@ -378,6 +378,11 @@ subtest 'Dashboard::Plugin::Helpers' => sub {
     ok $schema,                             'loaded incident schema from file';
     ok $t->app->schema({type => 'object'}), 'loaded schema from reference';
   };
+  subtest 'schema helper from ref' => sub {
+    my $schema_ref = {type => 'object', properties => {foo => {type => 'string'}}};
+    my $schema     = $t->app->schema($schema_ref);
+    ok $schema, 'loaded schema from hash ref';
+  };
 };
 
 done_testing();
