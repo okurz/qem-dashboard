@@ -9,7 +9,13 @@ export default defineConfig({
   plugins: [vue()],
   test: {
     environment: 'jsdom',
-    globals: true
+    globals: true,
+    coverage: {
+      provider: 'v8',
+      include: ['assets/vue/**/*.{js,vue}', 'assets/stores/**/*.js'],
+      exclude: ['**/*.test.js', '**/*.spec.js'],
+      all: true
+    }
   },
   resolve: {
     alias: {
