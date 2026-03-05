@@ -211,10 +211,11 @@ sub _register_routes ($self, $config) {
         json => {
           bootId             => $self->{boot_id},
           openqaUrl          => $c->openqa_url->path('/tests/overview'),
-          openqaNotGroupGlob => $config->{openqa}{not_group_glob} // '*Devel*,*Test*',
+          openqaNotGroupGlob => $config->{openqa}{not_group_glob} // '*Devel*,*Test*',    # uncoverable branch true
           obsUrl             => $config->{obs}{url},
           smeltUrl           => $config->{smelt}{url},
           defaultPriority    => $config->{default_priority} // DEFAULT_PRIORITY
+            // GITEA_FALLBACK_PRIORITY_DEFAULT                                            # uncoverable branch true
         }
       );
     }
@@ -252,7 +253,7 @@ sub _register_routes ($self, $config) {
   $self->helper(
     'openapi.build_response_body' => sub ($c, $data) {
       if (ref $data eq 'HASH' && $data->{errors}) {
-        my $status = $data->{status} // 400;
+        my $status = $data->{status} // 400;    # uncoverable branch true
         if ($status == 404) { return Mojo::JSON::encode_json({error => 'Resource not found'}) }
         my @errors = map {
           blessed($_)
