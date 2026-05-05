@@ -21,15 +21,16 @@ sub new ($class, %args) {
     code => sub ($tool, $args) {
       my @results;
       for my $incident (@{$self->incidents->find($args)}) {
-        my @packages  = @{$incident->{packages} // []};
-        my @channels  = grep {defined} @{$incident->{channels} // []};
-        my $chan_text = @channels ? join(', ', @channels) : 'N/A';
+        my $channels  = $incident->{channels} // [];
+        my $packages  = $incident->{packages} // [];
+        my $chan_text = @$channels ? join(', ', grep {defined} @$channels) : 'N/A';
+        $chan_text = 'N/A' if $chan_text eq '';
         push @results,
           sprintf(
           "• **Incident %d**\n  * **Project:** %s\n  * **Packages:** %s\n  * **Channels:** %s",
           $incident->{number}  // 0,
           $incident->{project} // '',
-          join(', ', @packages), $chan_text
+          join(', ', @$packages), $chan_text
           );
       }
       return @results ? "```\n" . (join("\n\n", @results)) . "\n```" : "No active incidents found.";
@@ -54,8 +55,8 @@ sub new ($class, %args) {
         sprintf("Incident %d Details", $incident->{number} // 0),
         "=" x 40, "", sprintf("**Project:** %s", $incident->{project} // ''),
       );
-      my @packages = @{$incident->{packages} // []};
-      push @lines, sprintf("**Packages:** %s", join(', ', @packages));
+      my $packages = $incident->{packages} // [];
+      push @lines, sprintf("**Packages:** %s", join(', ', @$packages));
       my @channels  = @{$incidents->channels_for_incident($incident->{id}) // []};
       my $chan_text = @channels ? join(', ', @channels) : 'N/A';
       push @lines, sprintf("**Channels:** %s", $chan_text);
