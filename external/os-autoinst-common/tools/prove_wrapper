@@ -29,6 +29,8 @@ UNHANDLED=$(sed --regexp-extended \
   -e '/Files=.*Tests=/d' \
   -e '/Result: /d' \
   -e '/All tests successful\./d' \
+  -e '/libxml/Id' \
+  -e '/Devel::Cover: Deleting old coverage/d' \
  "$OUTPUT")
 
 if [ -n "$UNHANDLED" ]; then

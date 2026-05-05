@@ -8,8 +8,9 @@ use lib "$FindBin::Bin/lib";
 
 use Test::More;
 use Test::Mojo;
-use Test::Output qw(stderr_like);
-use Test::Warnings ':report_warnings';
+use Test::Output   qw(stderr_like);
+use Test::Warnings qw(allow_warnings :report_warnings);
+BEGIN { allow_warnings(qr/libxml/) }
 use Dashboard::Command::amqp_watcher;
 use Dashboard::Test;
 use Test::Stub::IOLoop;
