@@ -140,3 +140,9 @@ CREATE TABLE IF NOT EXISTS notification_settings (
 
 -- 11 down
 DROP TABLE IF EXISTS notification_settings;
+
+-- 11 up
+ALTER TABLE incidents ADD COLUMN rejection_reason TEXT;
+
+-- 11 down
+ALTER TABLE incidents DROP COLUMN rejection_reason;

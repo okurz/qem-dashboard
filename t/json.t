@@ -8,9 +8,10 @@ use lib "$FindBin::Bin/lib";
 
 use Test::More;
 use Test::Mojo;
-use Test::Output 'stderr_like';
 use Test::Warnings ':report_warnings';
+use Test::Output qw(stderr_like);
 use Dashboard::Test;
+use Mojo::JSON qw(true false);
 
 if (!$ENV{TEST_ONLINE}) {    # uncoverable branch true
   plan skip_all => 'set TEST_ONLINE to enable this test';    # uncoverable statement

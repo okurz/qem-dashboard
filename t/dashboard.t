@@ -138,7 +138,8 @@ subtest 'openapi.build_response_body extra coverage' => sub {
     package MockError;
     use overload '""' => sub {'Error'};
   }
-  is $t->app->openapi->build_response_body({errors => [bless({}, 'MockError')], status => 400}),
+  is $t->app->openapi->build_response_body(
+    {errors => [bless({message => 'Error', path => ''}, 'MockError')], status => 400}),
     '{"error":"Validation failed","errors":[{"message":"Error","path":""}]}', 'handles other statuses with errors';
 };
 
@@ -275,7 +276,7 @@ subtest 'Blocked status' => sub {
     stderr_like {
       $t->get_ok('/app/api/blocked/new')->status_is(200)->json_has('/blocked')->json_has('/last_checked');
     }
-    qr/access_log/, 'access log caught';
+    $access_log->(), 'access log caught';
 
     my $now_ms = Time::HiRes::time() * 1000;
 
@@ -285,20 +286,20 @@ subtest 'Blocked status' => sub {
         ->status_is(200)
         ->json_is('/blocked', [], 'empty list when since is in the future');
     }
-    qr/access_log/, 'access log caught';
+    $access_log->(), 'access log caught';
 
     # since is in the past
     stderr_like { $t->get_ok("/app/api/blocked/new?since=" . ($now_ms - 100000))->status_is(200) }
-    qr/access_log/, 'access log caught';
+    $access_log->(), 'access log caught';
     my $blocked = $t->tx->res->json->{blocked};
     ok scalar(@$blocked) > 0, 'not empty when since is in the past';
   };
 
   subtest 'coverage for Dashboard.pm helper/hooks' => sub {
     stderr_like { $t->get_ok('/api/incidents/abc' => {Authorization => 'Token test_token'})->status_is(400) }
-    qr/access_log/, 'access log caught';
+    $access_log->(), 'access log caught';
     $t->app->routes->get('/test_400_no_json' => sub ($c) { $c->render(text => 'error', status => 400) });
-    stderr_like { $t->get_ok('/test_400_no_json')->status_is(400) } qr/access_log/, 'access log caught';
+    stderr_like { $t->get_ok('/test_400_no_json')->status_is(400) } $access_log->(), 'access log caught';
     is $t->app->openapi->build_response_body([]), '[]', 'handles non-hash data';
     is $t->app->openapi->build_response_body({}), '{}', 'handles hash without errors';
 

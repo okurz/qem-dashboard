@@ -123,6 +123,7 @@ subtest 'amqp_watcher command' => sub {
         timer => sub {
           (my $loop, my $delay, my $cb) = @_;
           push @backoff_counter, $delay if defined $delay;    # uncoverable branch false
+          push @timer_callbacks, $cb;
           $cb->();
         }
       );

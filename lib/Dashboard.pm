@@ -215,7 +215,6 @@ sub _register_routes ($self, $config) {
           obsUrl             => $config->{obs}{url},
           smeltUrl           => $config->{smelt}{url},
           defaultPriority    => $config->{default_priority} // DEFAULT_PRIORITY
-            // GITEA_FALLBACK_PRIORITY_DEFAULT                                            # uncoverable branch true
         }
       );
     }

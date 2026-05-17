@@ -43,8 +43,8 @@ sub run_api_tests ($t, $prefix) {
   };
 
   subtest 'Migrations' => sub {
-    is $t->app->pg->migrations->latest, 10, 'latest version';
-    is $t->app->pg->migrations->active, 10, 'active version';
+    is $t->app->pg->migrations->latest, 11, 'latest version';
+    is $t->app->pg->migrations->active, 11, 'active version';
   };
 
   subtest 'Unknown endpoint' => sub {
@@ -92,7 +92,7 @@ sub run_api_tests ($t, $prefix) {
       sub {
         $t->patch_ok("$prefix/incidents" => $auth_headers)
           ->status_is(400)
-          ->json_is('/error',            'Validation failed')
+          ->json_is('/error', 'Validation failed')
           ->json_like('/errors/0/message', qr/Missing property/);
 
         $t->patch_ok("$prefix/incidents" => $auth_headers => json => [{number => 16861}])->status_is(400);
@@ -104,7 +104,7 @@ sub run_api_tests ($t, $prefix) {
 
         $t->patch_ok("$prefix/incidents/16860" => $auth_headers)
           ->status_is(400)
-          ->json_is('/error',            'Validation failed')
+          ->json_is('/error', 'Validation failed')
           ->json_like('/errors/0/message', qr/Missing property/);
 
         $t->patch_ok(
@@ -169,7 +169,6 @@ sub run_api_tests ($t, $prefix) {
         $t->patch_ok("$prefix/incidents/99999/rejection_reason" => $auth_headers => json => {rejection_reason => 'foo'})
           ->status_is(404)
           ->json_is('/error', 'Incident not found');
-
         # Test new fields from qem-bot
         my $qem_bot_incident = {
           %$mock_incident,
@@ -336,9 +335,8 @@ sub run_api_tests ($t, $prefix) {
   subtest 'Remarks' => sub {
     $stderr_test->(
       sub {
-        $t->patch_ok(
-          "$prefix/jobs/4953193/remarks" => $auth_headers => form => {incident_number => '16860', text => 'acceptable_for'})
-          ->status_is(200);
+        $t->patch_ok("$prefix/jobs/4953193/remarks" => $auth_headers => form =>
+            {incident_number => '16860', text => 'acceptable_for'})->status_is(200);
 
         $t->get_ok("$prefix/jobs/4953193/remarks" => $auth_headers)
           ->status_is(200)
@@ -352,21 +350,24 @@ sub run_api_tests ($t, $prefix) {
         ok grep({ $_->{text} eq 'param_text' } @$remarks), 'query param text takes precedence';
 
         # Test update_remark with JSON body
-        $t->patch_ok(
-          "$prefix/jobs/4953193/remarks" => $auth_headers => json => {incident_number => "16861", text => 'body_text_2'})
+        $t->patch_ok("$prefix/jobs/4953193/remarks" => $auth_headers => json =>
+            {incident_number => "16861", text => 'body_text_2'})
           ->status_is(200)
           ->json_is('/message', 'Ok', 'patch job remarks with JSON body returns Ok');
 
-        $remarks = $t->get_ok("$prefix/jobs/4953193/remarks" => $auth_headers)->status_is(200)->tx->res->json->{remarks};
+        $remarks
+          = $t->get_ok("$prefix/jobs/4953193/remarks" => $auth_headers)->status_is(200)->tx->res->json->{remarks};
         ok grep({ $_->{text} eq 'body_text_2' } @$remarks), 'found body_text_2 remark';
 
         # Branch coverage: job remark without incident number
-        $t->patch_ok("$prefix/jobs/4953193/remarks" => $auth_headers => form => {text => 'global_remark'})->status_is(200);
+        $t->patch_ok("$prefix/jobs/4953193/remarks" => $auth_headers => form => {text => 'global_remark'})
+          ->status_is(200);
         $t->patch_ok("$prefix/jobs/4953193/remarks?text=global_remark_2" => $auth_headers)
           ->status_is(200)
           ->json_is('/message', 'Ok', 'patch global job remarks returns Ok');
 
-        $remarks = $t->get_ok("$prefix/jobs/4953193/remarks" => $auth_headers)->status_is(200)->tx->res->json->{remarks};
+        $remarks
+          = $t->get_ok("$prefix/jobs/4953193/remarks" => $auth_headers)->status_is(200)->tx->res->json->{remarks};
         ok grep({ $_->{text} eq 'global_remark' } @$remarks),   'found global_remark';
         ok grep({ $_->{text} eq 'global_remark_2' } @$remarks), 'found global_remark_2';
         ok grep({ $_->{text} eq 'global_remark' && !defined $_->{incident} } @$remarks),
@@ -385,7 +386,8 @@ sub run_api_tests ($t, $prefix) {
           ->json_is('/error', 'Incident (99999) does not exist');
 
         # Validation failure: invalid incident_number in JSON
-        $t->patch_ok("$prefix/jobs/4953193/remarks" => $auth_headers => json => {incident_number => 'abc', text => 'foo'})
+        $t->patch_ok(
+          "$prefix/jobs/4953193/remarks" => $auth_headers => json => {incident_number => 'abc', text => 'foo'})
           ->status_is(400);
 
         # Validation failure: missing text
@@ -394,7 +396,9 @@ sub run_api_tests ($t, $prefix) {
           ->json_is('/error', 'Missing remark text');
 
         # Invalid job_id type
-        $t->patch_ok("$prefix/jobs/abc/remarks" => $auth_headers)->status_is(400)->json_is('/error', 'Validation failed');
+        $t->patch_ok("$prefix/jobs/abc/remarks" => $auth_headers)
+          ->status_is(400)
+          ->json_is('/error', 'Validation failed');
       },
       'access log caught'
     );
