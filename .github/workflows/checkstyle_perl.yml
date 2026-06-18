@@ -10,16 +10,18 @@ jobs:
   checkstyle-perl:
     runs-on: ubuntu-latest
     container:
-      image: perl:5.42
+      image: registry.opensuse.org/devel/openqa/qem-dashboard/containers/opensuse/qem-dashboard_devel:latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - name: Bootstrap container dependencies
+        run: |
+          if ! command -v git &>/dev/null || ! command -v make &>/dev/null || ! command -v perltidy &>/dev/null; then
+            echo "Installing missing system packages..."
+            zypper in -y -C git-core make gcc file-devel findutils perl-App-cpanminus perl-Perl-Tidy
+          fi
       - name: Fix git permissions
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - name: perl -V
-        run: perl -V
-      - name: Install dependencies
-        run: cpanm -n Perl::Tidy CPAN::Audit
-      - name: perltidy --version
-        run: perltidy --version
+      - name: Install extra dependencies
+        run: make install-deps-cpanm
       - name: Run checkstyle
         run: make checkstyle-perl
