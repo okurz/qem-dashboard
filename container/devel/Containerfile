@@ -19,12 +19,39 @@ LABEL org.opencontainers.image.created="%BUILDTIME%"
 # hadolint ignore=DL3037
 RUN zypper in -y -C \
     retry \
+    curl \
+    jq \
+    make \
+    gcc \
+    git-core \
+    file-devel \
+    findutils \
+    python313-gitlint \
+    perl-App-cpanminus \
+    perl-Perl-Tidy \
     perl-Mojolicious \
     perl-Mojolicious-Plugin-Webpack \
+    perl-Mojolicious-Plugin-OpenAPI \
     perl-Mojo-Pg \
+    perl-Mojo-RabbitMQ-Client \
     perl-Cpanel-JSON-XS \
     perl-JSON-Validator \
     perl-IO-Socket-SSL \
+    perl-Devel-Cover \
+    perl-Test-Deep \
+    perl-Test-MockModule \
+    perl-Test-Output \
+    perl-Test-Warnings \
+    perl-YAML-LibYAML \
+    perl-MCP \
+    perl-PerlIO-gzip \
+    perl-JSON \
+    perl-IO-Interactive \
+    perl-Capture-Tiny \
+    perl-Class-Data-Inheritable \
+    perl-Class-Accessor \
+    perl-XML-LibXML \
+    perl-HTML-Parser \
     nodejs-default \
     npm && \
     zypper clean -a
