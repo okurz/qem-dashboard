@@ -9,6 +9,8 @@ on:
 jobs:
   only-test:
     runs-on: ubuntu-latest
+    container:
+      image: registry.opensuse.org/devel/openqa/qem-dashboard/containers/opensuse/qem-dashboard_devel:latest
     services:
       postgres:
         image: postgres
@@ -24,21 +26,22 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v6
-      - uses: shogo82148/actions-setup-perl@8a3e458e34220c3cd62497d8c297eae315b88a72  # v1
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
-        with:
-          node-version: '22'
-      - name: node -v
-        run: node -v
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+      - name: Bootstrap container dependencies
+        run: |
+          if ! command -v git &>/dev/null || ! command -v make &>/dev/null || ! command -v npm &>/dev/null; then
+            echo "Installing missing system packages..."
+            zypper in -y -C git-core make gcc file-devel findutils perl-App-cpanminus nodejs-default npm
+          fi
+      - name: Fix git permissions
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Install JS dependencies
         run: make install-deps-js
-      - name: perl -V
-        run: perl -V
-      - name: Install dependencies
-        run: |
-          make install-deps-ubuntu install-deps-cpanm
+      - name: Install Perl dependencies
+        run: make install-deps-cpanm
       - name: Run all tests with coverage
+        env:
+          TEST_ONLINE: postgresql://postgres:postgres@postgres:5432/postgres
         run: make only-test-coverage
       - name: Check assets
         run: ls public/asset

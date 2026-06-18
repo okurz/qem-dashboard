@@ -6,7 +6,7 @@ stages:
   - mirror
 
 default:
-  image: registry.opensuse.org/home/okurz/container/ca/containers/tumbleweed:curl-jq-ssh-git-retry
+  image: registry.opensuse.org/devel/openqa/qem-dashboard/containers/opensuse/qem-dashboard_devel:latest
 
 mirror-from-github:
   stage: mirror
