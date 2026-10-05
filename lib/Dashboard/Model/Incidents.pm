@@ -53,9 +53,10 @@ sub find ($self, $options = {}) {
     'SELECT number, project, packages, rr_number, review, review_qam, approved, emu, active, embargoed, priority, ARRAY_AGG(c.name) as channels,
             scminfo, url, type, rejection_reason
      FROM incidents i LEFT JOIN incident_channels ic ON ic.incident = i.id LEFT JOIN channels c ON ic.channel = c.id
-     WHERE number = COALESCE(?, number) AND project = COALESCE(?, project) AND type = COALESCE(?, type) AND active = TRUE
+     WHERE number = COALESCE(?, number) AND project = COALESCE(?, project) AND type = COALESCE(?, type)
+           AND (?::boolean IS TRUE OR active = TRUE)
      GROUP BY number, project, packages, rr_number, review, review_qam, approved, emu, active, embargoed, priority, scminfo, url, type, rejection_reason
-     ORDER BY number, project, type', @{$options}{qw(number project type)}
+     ORDER BY active DESC, number, project, type', @{$options}{qw(number project type all)}
   )->hashes->to_array;
   $self->_map($_) for @$incidents;
 
@@ -111,8 +112,9 @@ sub key_for_id ($self, $id) {
 # Type is optional, so several ids are returned when the same number exists with different types in one project
 sub ids_for ($self, $key) {
   return $self->pg->db->query(
-    'SELECT id FROM incidents WHERE number = ? AND project = ? AND type = COALESCE(?, type) ORDER BY id',
-    @{$key}{qw(number project type)})->arrays->flatten->to_array;
+    'SELECT id FROM incidents WHERE number = ? AND project = COALESCE(?, project) AND type = COALESCE(?, type) ORDER BY id',
+    @{$key}{qw(number project type)}
+  )->arrays->flatten->to_array;
 }
 
 sub name ($self, $inc) {

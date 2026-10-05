@@ -411,7 +411,8 @@ None
 `PUT /api/update_settings`
 
 Add update openQA settings. Returns the internal dashboard id required for the creation of jobs. Each entry of
-`incidents` requires `number` and `project`; `type` is optional unless needed to disambiguate.
+`incidents` can be an object with `number` and optional `project` (unless needed to disambiguate), or a plain
+incident number for backward compatibility.
 
 **Request parameters:**
 

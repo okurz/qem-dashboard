@@ -4,6 +4,7 @@ use Test::More;
 use Test::Mojo;
 use Test::Output 'stderr_like';
 use Mojo::JSON qw(false true);
+use Dashboard::Controller::API::Jobs;
 use Exporter 'import';
 
 our @EXPORT = qw(run_api_tests);
@@ -135,6 +136,8 @@ sub run_api_tests ($t, $prefix) {
         $t->get_ok("$prefix/incidents/16860?project=SUSE:Maintenance:16860" => $auth_headers)
           ->status_is(200)
           ->json_is('', $expected);
+        $t->get_ok("$prefix/incidents/16860" => $auth_headers)->status_is(200)->json_is('',       $expected);
+        $t->get_ok("$prefix/incidents/99999" => $auth_headers)->status_is(404)->json_is('/error', 'Incident not found');
 
         # Update
         my $updated_mock = {%$mock_incident, priority => 456, embargoed => true};
@@ -189,6 +192,31 @@ sub run_api_tests ($t, $prefix) {
         $t->patch_ok(
           "$prefix/incidents/99999/rejection_reason?project=SUSE:Maintenance:99999" => $auth_headers => json =>
             {rejection_reason => 'foo'})->status_is(404)->json_is('/error', 'Incident not found');
+        $t->patch_ok("$prefix/incidents/99999/rejection_reason" => $auth_headers => json => {rejection_reason => 'foo'})
+          ->status_is(404)
+          ->json_is('/error', 'Incident not found');
+
+        $t->app->incidents->update({%$mock_incident, number => 20000, project => 'SUSE:Maintenance:20000:A',});
+        $t->app->incidents->update({%$mock_incident, number => 20000, project => 'SUSE:Maintenance:20000:B',});
+        $t->get_ok("$prefix/incidents/20000" => $auth_headers)
+          ->status_is(400)
+          ->json_is('/error', 'Incident (20000) is ambiguous, project is required');
+        $t->patch_ok("$prefix/incidents/20000/rejection_reason" => $auth_headers => json => {rejection_reason => 'foo'})
+          ->status_is(400)
+          ->json_is('/error', 'Incident (20000) is ambiguous, project is required');
+
+        $t->app->incidents->update(
+          {%$mock_incident, number => 20001, project => 'SUSE:Maintenance:20001', type => 'ibs',});
+        $t->app->incidents->update(
+          {%$mock_incident, number => 20001, project => 'SUSE:Maintenance:20001', type => 'obs',});
+        $t->get_ok("$prefix/incidents/20001?project=SUSE:Maintenance:20001" => $auth_headers)
+          ->status_is(400)
+          ->json_is('/error', 'Incident (20001) is ambiguous in project (SUSE:Maintenance:20001), type is required');
+        $t->patch_ok(
+          "$prefix/incidents/20001/rejection_reason?project=SUSE:Maintenance:20001" => $auth_headers => json =>
+            {rejection_reason => 'foo'})
+          ->status_is(400)
+          ->json_is('/error', 'Incident (20001) is ambiguous in project (SUSE:Maintenance:20001), type is required');
 
         # Test new fields from qem-bot
         my $qem_bot_incident = {
@@ -228,6 +256,21 @@ sub run_api_tests ($t, $prefix) {
         $t->get_ok("$prefix/incident_settings/99999?project=SUSE:Maintenance:99999" => $auth_headers)
           ->status_is(400)
           ->json_is('/error', 'Incident not found', 'error for non-existent incident settings');
+        $t->get_ok("$prefix/incident_settings/99999" => $auth_headers)
+          ->status_is(400)
+          ->json_is('/error', 'Incident not found', 'error for non-existent incident settings without project');
+        $t->get_ok("$prefix/incident_settings/20000" => $auth_headers)->status_is(400)->json_is(
+          '/error',
+          'Incident (20000) is ambiguous, project is required',
+          'error for ambiguous incident settings without project'
+        );
+        $t->get_ok("$prefix/incident_settings/20001?project=SUSE:Maintenance:20001" => $auth_headers)
+          ->status_is(400)
+          ->json_is(
+          '/error',
+          'Incident (20001) is ambiguous in project (SUSE:Maintenance:20001), type is required',
+          'error for ambiguous incident settings with project'
+          );
 
         # Validation failure: incident settings with invalid number
         $t->get_ok("$prefix/incident_settings/abc" => $auth_headers)->status_is(400);
@@ -246,6 +289,20 @@ sub run_api_tests ($t, $prefix) {
             settings  => {DISTRI => 'sle', VERSION => '15-SP2'}
           }
         )->status_is(200)->json_is('/message', 'Ok', 'put update_settings returns Ok')->json_is('/id', 1);
+
+        $t->put_ok(
+          "$prefix/update_settings" => $auth_headers => json => {
+            incidents => [16860],
+            product   => 'SLES-15-GA',
+            arch      => 'x86_64',
+            build     => '20201107-2',
+            repohash  => 'd5815a9f8aa482ec8288508da27a9d37',
+            settings  => {DISTRI => 'sle', VERSION => '15-SP2'}
+          }
+          )
+          ->status_is(200, 'put update_settings with scalar incident ID returns 200 OK')
+          ->json_is('/message', 'Ok', 'put update_settings with scalar incident ID returns Ok message')
+          ->json_is('/id',      2,    'put update_settings with scalar incident ID returns id 2');
 
         # Validation failure: add update settings with invalid body
         $t->put_ok("$prefix/update_settings" => $auth_headers => json => {incidents => 'abc'})->status_is(400);
@@ -362,6 +419,10 @@ sub run_api_tests ($t, $prefix) {
       ->status_is(200)
       ->json_is('/remarks/0/text', 'acceptable_for');
 
+    is_deeply Dashboard::Controller::API::Jobs::_remark($t->app->incidents, {incident_id => 99999, text => 'orphan'}),
+      {text => 'orphan', incident => undef, project => undef, type => undef},
+      'remark formatting handles orphaned incident_id';
+
     # Test update_remark with JSON body
     $t->patch_ok("$prefix/jobs/4953193/remarks" => $auth_headers => json =>
         {incident_number => '16860', project => 'SUSE:Maintenance:16860', text => 'json_remark'})->status_is(200);
@@ -391,11 +452,26 @@ sub run_api_tests ($t, $prefix) {
       ->status_is(404)
       ->json_is('/error', 'openQA job (8888888) does not exist');
 
-    # Missing branch: non-existent incident
     $t->patch_ok(
       "$prefix/jobs/4953193/remarks?incident_number=99999&project=SUSE:Maintenance:99999&text=foo" => $auth_headers)
       ->status_is(404)
       ->json_is('/error', 'Incident (99999) does not exist in project (SUSE:Maintenance:99999)');
+
+    $t->patch_ok("$prefix/jobs/4953193/remarks?incident_number=99999&text=foo" => $auth_headers)
+      ->status_is(404)
+      ->json_is('/error', 'Incident (99999) does not exist');
+
+    $t->patch_ok("$prefix/jobs/4953193/remarks" => $auth_headers => json =>
+        {incident_number => '16860', text => 'remark_no_project'})->status_is(200);
+
+    $t->patch_ok("$prefix/jobs/4953193/remarks" => $auth_headers => json => {incident_number => '20000', text => 'foo'})
+      ->status_is(400)
+      ->json_is('/error', 'Incident (20000) is ambiguous, project is required');
+
+    $t->patch_ok("$prefix/jobs/4953193/remarks" => $auth_headers => json =>
+        {incident_number => '20001', project => 'SUSE:Maintenance:20001', text => 'foo'})
+      ->status_is(400)
+      ->json_is('/error', 'Incident (20001) is ambiguous in project (SUSE:Maintenance:20001), type is required');
 
     # Validation failure: invalid incident_number in JSON
     $t->patch_ok("$prefix/jobs/4953193/remarks" => $auth_headers => json => {incident_number => 'abc', text => 'foo'})
@@ -459,6 +535,24 @@ sub run_api_tests ($t, $prefix) {
           )
           ->status_is(400)
           ->json_is('/error', 'Incident not found', 'error for adding update_settings with non-existent incident');
+
+        $t->put_ok("$prefix/update_settings" => $auth_headers => json =>
+            {incidents => [99999], product => 'p', arch => 'a', build => 'b', repohash => 'h', settings => {}})
+          ->status_is(400, 'put update_settings with non-existent scalar incident returns 400')
+          ->json_is(
+          '/error',
+          'Incident not found',
+          'error for adding update_settings with non-existent scalar incident'
+          );
+
+        $t->put_ok("$prefix/update_settings" => $auth_headers => json =>
+            {incidents => [20000], product => 'p', arch => 'a', build => 'b', repohash => 'h', settings => {}})
+          ->status_is(400, 'put update_settings with ambiguous scalar incident returns 400')
+          ->json_is(
+          '/error',
+          'Incident (20000) is ambiguous, project is required',
+          'error for adding update_settings with ambiguous scalar incident'
+          );
 
         # _fix_booleans: withAggregate is false
         $t->put_ok(

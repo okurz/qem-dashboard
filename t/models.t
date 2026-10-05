@@ -40,6 +40,7 @@ subtest 'Dashboard::Model::Incidents' => sub {
 
   subtest 'ids_for and key_for_id' => sub {
     is $incidents->ids_for({number => 16860, project => 'SUSE:Maintenance:16860'})->[0], 1, 'correct id for 16860';
+    is $incidents->ids_for({number => 16860})->[0], 1, 'correct id for 16860 without project';
     is_deeply $incidents->key_for_id(1), {number => 16860, project => 'SUSE:Maintenance:16860', type => ''},
       'correct key for id 1';
     is_deeply $incidents->ids_for({number => 99999, project => 'SUSE:Maintenance:99999'}), [],
@@ -417,6 +418,52 @@ subtest 'Dashboard::Plugin::Helpers' => sub {
     my $schema = $t->app->schema('incident');
     ok $schema,                             'loaded incident schema from file';
     ok $t->app->schema({type => 'object'}), 'loaded schema from reference';
+  };
+
+  subtest 'incident_id helper' => sub {
+    my $c = sub { $t->app->build_controller };
+    is $c->()->incident_id({number => 16860}), 1, 'unique incident id found without project';
+    is $c->()->incident_id({number => 16860, project => 'SUSE:Maintenance:16860'}), 1,
+      'unique incident id found with project';
+
+    my $c1 = $c->();
+    is $c1->incident_id({number => 99999}), undef, 'undef returned for non-existent incident';
+    is $c1->res->code,                      400,   'default status 400 for non-existent incident';
+    is_deeply $c1->res->json, {error => 'Incident not found'}, 'default error message for non-existent incident';
+
+    my $c2 = $c->();
+    is $c2->incident_id({number => 99999}, status => 404, error => 'Custom error'), undef,
+      'undef returned for non-existent incident with custom error';
+    is $c2->res->code, 404, 'custom status 404 for non-existent incident';
+    is_deeply $c2->res->json, {error => 'Custom error'}, 'custom error message for non-existent incident';
+
+    my $mock_incident_helper = {
+      packages    => ['pkg1'],
+      channels    => ['Test'],
+      rr_number   => undef,
+      inReview    => true,
+      inReviewQAM => true,
+      approved    => false,
+      emu         => true,
+      isActive    => true,
+      embargoed   => false,
+      priority    => 123,
+    };
+    $t->app->incidents->update({%$mock_incident_helper, number => 30000, project => 'P1'});
+    $t->app->incidents->update({%$mock_incident_helper, number => 30000, project => 'P2'});
+    my $c3 = $c->();
+    is $c3->incident_id({number => 30000}), undef, 'undef for ambiguous incident without project';
+    is $c3->res->code,                      400,   'status 400 for ambiguous incident without project';
+    is_deeply $c3->res->json, {error => 'Incident (30000) is ambiguous, project is required'},
+      'error message for ambiguous incident without project';
+
+    $t->app->incidents->update({%$mock_incident_helper, number => 30001, project => 'P3', type => 'ibs'});
+    $t->app->incidents->update({%$mock_incident_helper, number => 30001, project => 'P3', type => 'obs'});
+    my $c4 = $c->();
+    is $c4->incident_id({number => 30001, project => 'P3'}), undef, 'undef for ambiguous incident with project';
+    is $c4->res->code,                                       400,   'status 400 for ambiguous incident with project';
+    is_deeply $c4->res->json, {error => 'Incident (30001) is ambiguous in project (P3), type is required'},
+      'error message for ambiguous incident with project';
   };
 };
 

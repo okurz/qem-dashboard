@@ -21,7 +21,8 @@ sub add_update_settings ($self) {
   my $settings = $self->req->json;
   my @incident_ids;
   for my $incident (@{$settings->{incidents}}) {
-    return unless defined(my $incident_id = $self->incident_id($incident));
+    my $key = ref $incident eq 'HASH' ? $incident : {number => $incident};
+    return unless defined(my $incident_id = $self->incident_id($key));
     push @incident_ids, $incident_id;
   }
 
